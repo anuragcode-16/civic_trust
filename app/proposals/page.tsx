@@ -9,8 +9,8 @@ export default function Proposals() {
   const [activeTab, setActiveTab] = useState('active');
   const [showProposalForm, setShowProposalForm] = useState(false);
   
-  // Mock proposals data
-  const [proposals] = useState({
+  // Mock proposals data with useState to allow updates
+  const [proposals, setProposals] = useState({
     active: [
       {
         id: 'PROP-2023-42',
@@ -70,6 +70,56 @@ export default function Proposals() {
       },
     ]
   });
+
+  // User's voting status to prevent duplicate votes
+  const [userVotes, setUserVotes] = useState<Record<string, string>>({});
+
+  // Function to handle votes
+  const handleVote = (proposalId: string, voteType: 'for' | 'against' | 'abstain') => {
+    // Check if user has already voted
+    if (userVotes[proposalId]) {
+      alert(`You've already voted ${userVotes[proposalId]} on this proposal.`);
+      return;
+    }
+    
+    // Update the proposals state
+    setProposals(prev => {
+      // Find which tab the proposal is in
+      const tabKey = Object.keys(prev).find(key => 
+        prev[key as keyof typeof prev].some(p => p.id === proposalId)
+      ) as keyof typeof prev;
+      
+      if (!tabKey) return prev;
+      
+      // Clone the proposals object to avoid direct mutation
+      const updatedProposals = { ...prev };
+      
+      // Find the proposal and update its votes
+      updatedProposals[tabKey] = updatedProposals[tabKey].map(proposal => {
+        if (proposal.id === proposalId) {
+          return {
+            ...proposal,
+            votes: {
+              ...proposal.votes,
+              [voteType]: proposal.votes[voteType] + 1
+            }
+          };
+        }
+        return proposal;
+      });
+      
+      return updatedProposals;
+    });
+    
+    // Record user's vote to prevent double voting
+    setUserVotes(prev => ({
+      ...prev,
+      [proposalId]: voteType
+    }));
+    
+    // Show success message
+    alert(`Your vote has been recorded: ${voteType}`);
+  };
 
   const [newProposal, setNewProposal] = useState({
     title: '',
@@ -264,21 +314,41 @@ export default function Proposals() {
                         <div className="flex space-x-4">
                           <button
                             type="button"
-                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            onClick={() => handleVote(proposal.id, 'for')}
+                            className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                              userVotes[proposal.id] === 'for' 
+                                ? 'bg-green-400 cursor-not-allowed' 
+                                : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
+                            }`}
+                            disabled={!!userVotes[proposal.id]}
                           >
-                            Vote For
+                            {userVotes[proposal.id] === 'for' ? '✓ Voted For' : 'Vote For'}
                           </button>
                           <button
                             type="button"
-                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            onClick={() => handleVote(proposal.id, 'against')}
+                            className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                              userVotes[proposal.id] === 'against' 
+                                ? 'bg-red-400 cursor-not-allowed' 
+                                : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500'
+                            }`}
+                            disabled={!!userVotes[proposal.id]}
                           >
-                            Vote Against
+                            {userVotes[proposal.id] === 'against' ? '✓ Voted Against' : 'Vote Against'}
                           </button>
                           <button
                             type="button"
-                            className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            onClick={() => handleVote(proposal.id, 'abstain')}
+                            className={`inline-flex justify-center py-2 px-4 border ${
+                              userVotes[proposal.id] === 'abstain'
+                                ? 'border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed'
+                                : isDarkMode
+                                  ? 'border-gray-600 text-gray-200 bg-gray-700 hover:bg-gray-600'
+                                  : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                            }`}
+                            disabled={!!userVotes[proposal.id]}
                           >
-                            Abstain
+                            {userVotes[proposal.id] === 'abstain' ? '✓ Abstained' : 'Abstain'}
                           </button>
                         </div>
                       </div>
