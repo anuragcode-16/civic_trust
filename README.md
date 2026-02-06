@@ -31,8 +31,8 @@ CivicChain is a decentralized application for community governance and civic eng
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/civic-chain.git
-   cd civic-chain
+   git clone https://github.com/yourusername/civic_trust.git
+   cd civic_trust
    ```
 
 2. Install dependencies:
