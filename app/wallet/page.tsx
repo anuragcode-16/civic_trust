@@ -2,30 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import TokenPriceHistory from '../components/TokenPriceHistory';
 import TokenAllocation from '../components/TokenAllocation';
 
 // Type definitions for Ethereum window object
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (request: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, callback: (...args: any[]) => void) => void;
-      removeListener: (event: string, callback: (...args: any[]) => void) => void;
-      chainId: string;
-      networkVersion: string;
-    };
-  }
-}
+// Type definitions moved to usage to avoid global conflicts
+// (window as any).ethereum used locally
 
 export default function Wallet() {
   const { isDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'transactions', 'send', 'settings'
   const [transactionType, setTransactionType] = useState('all'); // 'all', 'sent', 'received', 'rewards'
   const [sortOrder, setSortOrder] = useState('newest'); // 'newest', 'oldest', 'highest', 'lowest'
-  
+
   // Send tokens form state
   const [recipientAddress, setRecipientAddress] = useState('');
   const [sendAmount, setSendAmount] = useState('');
@@ -53,7 +43,7 @@ export default function Wallet() {
 
   // Check if MetaMask is installed
   const checkIfMetaMaskInstalled = () => {
-    return window.ethereum && window.ethereum.isMetaMask;
+    return (window as any).ethereum && (window as any).ethereum.isMetaMask;
   };
 
   // Connect to MetaMask
@@ -66,17 +56,17 @@ export default function Wallet() {
     try {
       setIsConnecting(true);
       setConnectionError('');
-      
-      const accounts = await window.ethereum!.request({
+
+      const accounts = await (window as any).ethereum!.request({
         method: 'eth_requestAccounts',
       });
-      
+
       if (accounts && accounts.length > 0) {
         setWalletAddress(accounts[0]);
         setIsConnected(true);
 
         // Get chain ID and network info
-        const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
+        const chainId = await (window as any).ethereum!.request({ method: 'eth_chainId' });
         updateNetworkInfo(chainId);
       }
     } catch (error: any) {
@@ -93,22 +83,22 @@ export default function Wallet() {
     if (window.confirm('Are you sure you want to disconnect your wallet?')) {
       try {
         console.log('Disconnecting wallet...');
-        
+
         // Clear wallet state
         setWalletAddress('');
         setIsConnected(false);
         setNetworkInfo({ name: 'Unknown', chainId: '', gasPrice: '0.0000023' });
-        
+
         // Note: Due to how MetaMask works, a true "disconnection" is not possible
         // since MetaMask doesn't provide a method to programmatically disconnect.
         // The wallet is still connected in MetaMask, but our app no longer has access.
-        
+
         // Show success message
         alert('Wallet disconnected successfully.');
-        
+
         // Optional: Reset any user-specific data here
         // For example, if you have any cached transaction data specific to this user
-        
+
       } catch (error) {
         console.error('Error disconnecting wallet:', error);
         alert('Failed to disconnect wallet. Please try manually disconnecting in MetaMask.');
@@ -119,10 +109,10 @@ export default function Wallet() {
   // Update network info based on chain ID
   const updateNetworkInfo = (chainId: string) => {
     let networkName = 'Unknown Network';
-    
+
     // Convert chainId from hex to decimal
     const chainIdDecimal = parseInt(chainId, 16).toString();
-    
+
     switch (chainIdDecimal) {
       case '1':
         networkName = 'Ethereum Mainnet';
@@ -151,7 +141,7 @@ export default function Wallet() {
       default:
         networkName = `Chain ID: ${chainIdDecimal}`;
     }
-    
+
     setNetworkInfo({
       name: networkName,
       chainId: chainIdDecimal,
@@ -181,13 +171,13 @@ export default function Wallet() {
     const checkConnection = async () => {
       if (checkIfMetaMaskInstalled()) {
         try {
-          const accounts = await window.ethereum!.request({ method: 'eth_accounts' });
+          const accounts = await (window as any).ethereum!.request({ method: 'eth_accounts' });
           if (accounts && accounts.length > 0) {
             setWalletAddress(accounts[0]);
             setIsConnected(true);
-            
+
             // Get chain ID
-            const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
+            const chainId = await (window as any).ethereum!.request({ method: 'eth_chainId' });
             updateNetworkInfo(chainId);
           }
         } catch (error) {
@@ -200,16 +190,16 @@ export default function Wallet() {
     checkConnection();
 
     // Set up event listeners if MetaMask is available
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
+    if ((window as any).ethereum) {
+      (window as any).ethereum.on('accountsChanged', handleAccountsChanged);
+      (window as any).ethereum.on('chainChanged', handleChainChanged);
     }
 
     // Clean up event listeners on component unmount
     return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      if ((window as any).ethereum) {
+        (window as any).ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        (window as any).ethereum.removeListener('chainChanged', handleChainChanged);
       }
     };
   }, [walletAddress]);
@@ -237,7 +227,7 @@ export default function Wallet() {
     }
 
     const displayAddress = formatAddress(walletAddress);
-    
+
     // Get block explorer URL based on network
     let explorerUrl = '';
     if (networkInfo.chainId) {
@@ -317,7 +307,7 @@ export default function Wallet() {
   // Filter and sort transactions based on user selection
   const getFilteredTransactions = () => {
     let filtered = [...transactions];
-    
+
     // Filter by type
     if (transactionType !== 'all') {
       if (transactionType === 'sent') {
@@ -325,14 +315,14 @@ export default function Wallet() {
       } else if (transactionType === 'received') {
         filtered = filtered.filter(tx => tx.type === 'Received');
       } else if (transactionType === 'rewards') {
-        filtered = filtered.filter(tx => 
-          tx.type === 'Governance Reward' || 
-          tx.type === 'Event Attendance' || 
+        filtered = filtered.filter(tx =>
+          tx.type === 'Governance Reward' ||
+          tx.type === 'Event Attendance' ||
           tx.type === 'Content Creation'
         );
       }
     }
-    
+
     // Sort
     if (sortOrder === 'newest') {
       filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -343,14 +333,14 @@ export default function Wallet() {
     } else if (sortOrder === 'lowest') {
       filtered.sort((a, b) => a.amount - b.amount);
     }
-    
+
     return filtered;
   };
 
   // Get categories and their total amounts for the charts
   const getCategoryTotals = () => {
     const categories: Record<string, number> = {};
-    
+
     transactions.forEach(tx => {
       if (tx.type === 'Sent') {
         categories['Sent'] = (categories['Sent'] || 0) + tx.amount;
@@ -360,10 +350,10 @@ export default function Wallet() {
         categories['Rewards'] = (categories['Rewards'] || 0) + tx.amount;
       }
     });
-    
-    return Object.entries(categories).map(([category, total]) => ({ 
-      category, 
-      total 
+
+    return Object.entries(categories).map(([category, total]) => ({
+      category,
+      total
     }));
   };
 
@@ -371,44 +361,44 @@ export default function Wallet() {
   const handleSendSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recipientAddress || !sendAmount) return;
-    
+
     // Clear previous states
     setSendSuccess(false);
     setSendError('');
     setTxHash('');
     setIsSending(true);
-    
+
     try {
       // Validate input
       if (!recipientAddress.startsWith('0x') || recipientAddress.length !== 42) {
         throw new Error('Invalid recipient address');
       }
-      
+
       const amount = parseFloat(sendAmount);
       if (isNaN(amount) || amount <= 0) {
         throw new Error('Invalid amount');
       }
-      
+
       if (amount > walletData.balance) {
         throw new Error('Insufficient balance');
       }
-      
+
       // Check if MetaMask is connected
       if (!isConnected) {
         throw new Error('Wallet is not connected. Please connect your wallet first.');
       }
-      
+
       // Simulate blockchain transaction with delay
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Generate a mock transaction hash
-      const mockTxHash = '0x' + Array(64).fill(0).map(() => 
+      const mockTxHash = '0x' + Array(64).fill(0).map(() =>
         Math.floor(Math.random() * 16).toString(16)
       ).join('');
-      
+
       setTxHash(mockTxHash);
       setSendSuccess(true);
-      
+
       // In real implementation, we would send the transaction using Web3 here
       // const web3 = new Web3(window.ethereum);
       // const transaction = {
@@ -421,7 +411,7 @@ export default function Wallet() {
       // const receipt = await web3.eth.sendTransaction(transaction);
       // setTxHash(receipt.transactionHash);
       // setSendSuccess(true);
-      
+
     } catch (error: any) {
       console.error('Error sending tokens:', error);
       setSendError(error.message || 'Failed to send tokens. Please try again.');
@@ -440,23 +430,23 @@ export default function Wallet() {
     try {
       // Get filtered transactions
       const transactions = getFilteredTransactions();
-      
+
       if (transactions.length === 0) {
         alert('No transactions to export.');
         return;
       }
-      
+
       // Define CSV headers
       const headers = ['Date', 'Type', 'Amount', 'From/To', 'Status'];
-      
+
       // Format transaction data for CSV
       const csvData = transactions.map(tx => {
-        const fromTo = tx.type === 'Sent' 
+        const fromTo = tx.type === 'Sent'
           ? `To: ${tx.to}`
-          : `From: ${typeof tx.from === 'string' && tx.from.startsWith('0x') 
-              ? tx.from 
-              : tx.from}`;
-          
+          : `From: ${typeof tx.from === 'string' && tx.from.startsWith('0x')
+            ? tx.from
+            : tx.from}`;
+
         return [
           tx.date,
           tx.type,
@@ -465,33 +455,33 @@ export default function Wallet() {
           tx.status
         ];
       });
-      
+
       // Combine headers and data
       const csvContent = [
         headers.join(','),
         ...csvData.map(row => row.join(','))
       ].join('\n');
-      
+
       // Create blob and download link
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      
+
       // Create temporary link element
       const link = document.createElement('a');
       link.setAttribute('href', url);
       link.setAttribute('download', `ct-wallet-transactions-${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
-      
+
       // Append to document, click, and remove
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the URL object
       setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 100);
-      
+
     } catch (error) {
       console.error('Error exporting transactions:', error);
       alert('Failed to export transactions. Please try again.');
@@ -501,29 +491,28 @@ export default function Wallet() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <Navbar />
-      
+
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* Wallet header */}
         <div className="px-4 py-4 sm:px-0">
           <div className={`rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow px-5 py-4`}>
             <div className="flex items-center justify-between">
               <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  CivicTrust Wallet
-                </h2>
+                CivicTrust Wallet
+              </h2>
               <div className="flex items-center space-x-4">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${isConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-400'}`}>
                   {isConnected ? 'Connected' : 'Disconnected'}
-              </div>
+                </div>
                 <button
                   type="button"
                   disabled={isConnecting}
                   onClick={isConnected ? disconnectWallet : connectWallet}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium ${
-                    isConnecting ? 'bg-gray-400 cursor-not-allowed' :
-                    isConnected 
-                      ? 'text-white bg-red-600 hover:bg-red-700' 
+                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium ${isConnecting ? 'bg-gray-400 cursor-not-allowed' :
+                    isConnected
+                      ? 'text-white bg-red-600 hover:bg-red-700'
                       : 'text-white bg-indigo-600 hover:bg-indigo-700'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
                 >
                   {isConnecting ? 'Connecting...' : (isConnected ? 'Disconnect' : 'Connect Wallet')}
                 </button>
@@ -541,48 +530,44 @@ export default function Wallet() {
         <div className="px-4 sm:px-0 mt-4">
           <div className="hidden sm:block">
             <nav className="flex space-x-4" aria-label="Tabs">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`${
-                    activeTab === 'overview'
-                    ? `bg-indigo-600 text-white`
-                    : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
-                } px-3 py-2 font-medium text-sm rounded-md`}
-                >
-                  Overview
-                </button>
-                <button
-                  onClick={() => setActiveTab('transactions')}
-                  className={`${
-                    activeTab === 'transactions'
-                    ? `bg-indigo-600 text-white`
-                    : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
-                } px-3 py-2 font-medium text-sm rounded-md`}
-                >
-                  Transactions
-                </button>
-                <button
-                  onClick={() => setActiveTab('send')}
-                  className={`${
-                    activeTab === 'send'
-                    ? `bg-indigo-600 text-white`
-                    : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
-                } px-3 py-2 font-medium text-sm rounded-md`}
-                >
-                  Send Tokens
-                </button>
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={`${
-                    activeTab === 'settings'
-                    ? `bg-indigo-600 text-white`
-                    : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
-                } px-3 py-2 font-medium text-sm rounded-md`}
-                >
-                  Settings
-                </button>
-              </nav>
-            </div>
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`${activeTab === 'overview'
+                  ? `bg-indigo-600 text-white`
+                  : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
+                  } px-3 py-2 font-medium text-sm rounded-md`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`${activeTab === 'transactions'
+                  ? `bg-indigo-600 text-white`
+                  : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
+                  } px-3 py-2 font-medium text-sm rounded-md`}
+              >
+                Transactions
+              </button>
+              <button
+                onClick={() => setActiveTab('send')}
+                className={`${activeTab === 'send'
+                  ? `bg-indigo-600 text-white`
+                  : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
+                  } px-3 py-2 font-medium text-sm rounded-md`}
+              >
+                Send Tokens
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`${activeTab === 'settings'
+                  ? `bg-indigo-600 text-white`
+                  : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`
+                  } px-3 py-2 font-medium text-sm rounded-md`}
+              >
+                Settings
+              </button>
+            </nav>
+          </div>
           <div className={`sm:hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-md`}>
             <select
               id="tabs"
@@ -613,23 +598,23 @@ export default function Wallet() {
                       <div className="flex-shrink-0">
                         <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
                           <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
                       </div>
                       <div className="ml-3">
                         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Balance</h3>
                         <p className="mt-1 text-xl font-semibold text-indigo-600 dark:text-indigo-400">
-                              {walletData.balance} {walletData.tokenSymbol}
+                          {walletData.balance} {walletData.tokenSymbol}
                         </p>
-                            </div>
                       </div>
+                    </div>
                     <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
                       <div className="text-sm text-gray-500 dark:text-gray-400">≈ ₹25000</div>
                       <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-400 text-xs font-medium px-2 py-1 rounded">
                         +5.25%
+                      </div>
                     </div>
-                  </div>
                   </div>
                 </div>
 
@@ -641,9 +626,9 @@ export default function Wallet() {
                         <div className={`p-2 rounded-full ${isDarkMode ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
                           <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                          </svg>
+                        </div>
                       </div>
-                            </div>
                       <div className="ml-3">
                         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Network</h3>
                         <p className="mt-1 text-xl font-semibold text-purple-600 dark:text-purple-400">
@@ -654,7 +639,7 @@ export default function Wallet() {
                     <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <div className="text-sm text-gray-500 dark:text-gray-400">
                         Gas Price: {networkInfo.gasPrice} MATIC
-                  </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -667,9 +652,9 @@ export default function Wallet() {
                         <div className={`p-2 rounded-full ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
                           <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121.5 9z" />
-                        </svg>
+                          </svg>
+                        </div>
                       </div>
-                            </div>
                       <div className="ml-3">
                         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Wallet Address</h3>
                         <p className="mt-1 text-xl font-semibold text-blue-600 dark:text-blue-400 truncate max-w-xs">
@@ -678,20 +663,20 @@ export default function Wallet() {
                       </div>
                     </div>
                     <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-                    <button
+                      <button
                         onClick={copyAddressToClipboard}
                         disabled={!isConnected}
                         className={`text-sm ${!isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400'} text-indigo-500 dark:text-indigo-400`}
-                    >
-                      Copy Address
-                    </button>
-                    <button
+                      >
+                        Copy Address
+                      </button>
+                      <button
                         onClick={openInExplorer}
                         disabled={!isConnected}
                         className={`text-sm ${!isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400'} text-indigo-500 dark:text-indigo-400`}
-                    >
-                      View in Explorer
-                    </button>
+                      >
+                        View in Explorer
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -700,7 +685,7 @@ export default function Wallet() {
               {/* Charts Section */}
               <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
                 {/* Token Price History */}
-                <TokenPriceHistory 
+                <TokenPriceHistory
                   tokenSymbol={walletData.tokenSymbol}
                   tokenPrice={10.25}
                   percentageChange={12.3}
@@ -708,9 +693,9 @@ export default function Wallet() {
 
                 {/* Token Allocation */}
                 <div>
-                  <TokenAllocation 
-                    data={tokenAllocation} 
-                    totalTokens={totalTokens} 
+                  <TokenAllocation
+                    data={tokenAllocation}
+                    totalTokens={totalTokens}
                     isDarkMode={isDarkMode}
                   />
                 </div>
@@ -723,9 +708,9 @@ export default function Wallet() {
                     Recent Activity
                   </h2>
                   <a href="#" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
-                      View All
+                    View All
                   </a>
-                  </div>
+                </div>
                 <div className="mt-4">
                   <div className={`overflow-hidden shadow ring-1 ring-black ring-opacity-5 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} sm:rounded-lg`}>
                     <div className="overflow-x-auto">
@@ -758,35 +743,33 @@ export default function Wallet() {
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className={`text-sm font-medium ${
-                                  transaction.type === 'Sent' 
-                                    ? 'text-red-600 dark:text-red-400' 
-                                    : 'text-green-600 dark:text-green-400'
-                                }`}>
+                                <div className={`text-sm font-medium ${transaction.type === 'Sent'
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-green-600 dark:text-green-400'
+                                  }`}>
                                   {transaction.type === 'Sent' ? '-' : '+'}{transaction.amount} {walletData.tokenSymbol}
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                  {transaction.type === 'Sent' 
+                                  {transaction.type === 'Sent'
                                     ? `To: ${formatAddress(transaction.to)}`
                                     : typeof transaction.from === 'string' && transaction.from.startsWith('0x')
                                       ? `From: ${formatAddress(transaction.from)}`
                                       : `From: ${transaction.from}`
                                   }
-                              </div>
+                                </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                   {transaction.date}
-                              </div>
+                                </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  transaction.status === 'Completed'
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-400'
-                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-400'
-                                }`}>
+                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${transaction.status === 'Completed'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-400'
+                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-400'
+                                  }`}>
                                   {transaction.status}
                                 </span>
                               </td>
@@ -815,9 +798,8 @@ export default function Wallet() {
                       <select
                         id="transaction-type"
                         name="transaction-type"
-                        className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md ${
-                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
-                        }`}
+                        className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                          }`}
                         value={transactionType}
                         onChange={(e) => setTransactionType(e.target.value)}
                       >
@@ -835,9 +817,8 @@ export default function Wallet() {
                       <select
                         id="sort-order"
                         name="sort-order"
-                        className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md ${
-                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
-                        }`}
+                        className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                          }`}
                         value={sortOrder}
                         onChange={(e) => setSortOrder(e.target.value)}
                       >
@@ -847,7 +828,7 @@ export default function Wallet() {
                         <option value="lowest">Lowest Amount</option>
                       </select>
                     </div>
-                    
+
                     <div className="flex-shrink-0 self-end md:self-center">
                       <button
                         type="button"
@@ -858,78 +839,76 @@ export default function Wallet() {
                       </button>
                     </div>
                   </div>
-                    </div>
-                  </div>
+                </div>
+              </div>
 
-                  {/* Transactions Table */}
+              {/* Transactions Table */}
               <div className="mt-8">
                 <div className={`overflow-hidden shadow ring-1 ring-black ring-opacity-5 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} sm:rounded-lg`}>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                                <tr>
-                                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                                    Type
-                                  </th>
-                                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                                    Amount
-                                  </th>
-                                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                        <tr>
+                          <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                            Type
+                          </th>
+                          <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                            Amount
+                          </th>
+                          <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
                             Details
-                                  </th>
-                                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                                    Date
-                                  </th>
-                                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                                    Status
-                                  </th>
-                                </tr>
-                              </thead>
+                          </th>
+                          <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                            Date
+                          </th>
+                          <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
                       <tbody className={`bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700`}>
-                                {getFilteredTransactions().map((transaction) => (
+                        {getFilteredTransactions().map((transaction) => (
                           <tr key={transaction.id} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                          {transaction.type}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className={`text-sm font-medium ${
-                                        transaction.type === 'Sent' 
-                                  ? 'text-red-600 dark:text-red-400' 
-                                  : 'text-green-600 dark:text-green-400'
-                                      }`}>
-                                        {transaction.type === 'Sent' ? '-' : '+'}{transaction.amount} {walletData.tokenSymbol}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {transaction.type}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className={`text-sm font-medium ${transaction.type === 'Sent'
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-green-600 dark:text-green-400'
+                                }`}>
+                                {transaction.type === 'Sent' ? '-' : '+'}{transaction.amount} {walletData.tokenSymbol}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                        {transaction.type === 'Sent' 
-                                          ? `To: ${formatAddress(transaction.to)}`
+                                {transaction.type === 'Sent'
+                                  ? `To: ${formatAddress(transaction.to)}`
                                   : typeof transaction.from === 'string' && transaction.from.startsWith('0x')
                                     ? `From: ${formatAddress(transaction.from)}`
                                     : `From: ${transaction.from}`
-                                        }
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                              <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                        {transaction.date}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                              <div className={`text-sm ${
-                                transaction.type === 'Received' || transaction.type === 'Governance Reward' || transaction.type === 'Event Attendance'
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}>
-                                        {transaction.status}
+                                }
                               </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                {transaction.date}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className={`text-sm ${transaction.type === 'Received' || transaction.type === 'Governance Reward' || transaction.type === 'Event Attendance'
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                                }`}>
+                                {transaction.status}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -968,13 +947,13 @@ export default function Wallet() {
                                 <div className="mt-3">
                                   <p className="font-medium">Transaction Hash:</p>
                                   <p className="mt-1 text-xs break-all">{txHash}</p>
-                                  <button 
+                                  <button
                                     className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
                                     onClick={() => window.open(`https://mumbai.polygonscan.com/tx/${txHash}`, '_blank')}
                                   >
                                     View on Explorer
                                   </button>
-                            </div>
+                                </div>
                               )}
                             </div>
                             <div className="mt-4">
@@ -1025,9 +1004,8 @@ export default function Wallet() {
                                 type="text"
                                 name="recipient"
                                 id="recipient"
-                                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${
-                                  isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
-                                }`}
+                                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                                  }`}
                                 placeholder="0x..."
                                 value={recipientAddress}
                                 onChange={(e) => setRecipientAddress(e.target.value)}
@@ -1046,9 +1024,8 @@ export default function Wallet() {
                                 type="number"
                                 name="amount"
                                 id="amount"
-                                className={`focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md ${
-                                  isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
-                                }`}
+                                className={`focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                                  }`}
                                 placeholder="0.00"
                                 step="0.01"
                                 min="0"
@@ -1077,9 +1054,8 @@ export default function Wallet() {
                                 type="text"
                                 name="memo"
                                 id="memo"
-                                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${
-                                  isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
-                                }`}
+                                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                                  }`}
                                 placeholder="What's this transfer for?"
                                 value={memo}
                                 onChange={(e) => setMemo(e.target.value)}
@@ -1094,9 +1070,8 @@ export default function Wallet() {
                             </div>
                             <button
                               type="submit"
-                              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                                isSending || !isConnected ? 'opacity-60 cursor-not-allowed' : ''
-                              }`}
+                              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isSending || !isConnected ? 'opacity-60 cursor-not-allowed' : ''
+                                }`}
                               disabled={isSending || !isConnected}
                             >
                               {isSending ? (
@@ -1133,8 +1108,8 @@ export default function Wallet() {
                     <div className="mt-5 space-y-4">
                       {recentRecipients.length > 0 ? (
                         recentRecipients.map((recipient, index) => (
-                          <div 
-                            key={index} 
+                          <div
+                            key={index}
                             className={`p-4 border ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} rounded-lg cursor-pointer transition-colors duration-150`}
                             onClick={() => selectRecipient(recipient.address)}
                           >
@@ -1175,7 +1150,7 @@ export default function Wallet() {
               </div>
             </div>
           )}
-          
+
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="max-w-3xl mx-auto">
@@ -1186,7 +1161,7 @@ export default function Wallet() {
                   </h3>
                   <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                     Configure your wallet preferences and security options
-                    </p>
+                  </p>
 
                   <div className="mt-6 space-y-6">
                     <div>
@@ -1194,38 +1169,38 @@ export default function Wallet() {
                         Security Settings
                       </h4>
                       <div className="mt-3 space-y-4">
-                          <div className="flex items-start">
-                            <div className="flex items-center h-5">
-                              <input
+                        <div className="flex items-start">
+                          <div className="flex items-center h-5">
+                            <input
                               id="require-confirmation"
                               name="require-confirmation"
-                                type="checkbox"
-                                defaultChecked
+                              type="checkbox"
+                              defaultChecked
                               className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                              />
-                            </div>
-                            <div className="ml-3 text-sm">
+                            />
+                          </div>
+                          <div className="ml-3 text-sm">
                             <label htmlFor="require-confirmation" className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
                               Require confirmation
-                              </label>
-                              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
+                            </label>
+                            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
                               Always confirm transactions before sending
-                              </p>
-                            </div>
+                            </p>
                           </div>
-                            </div>
-                          </div>
-                          
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="pt-5 border-t border-gray-200 dark:border-gray-700">
                       <div className="flex justify-end">
-                            <button
-                              type="button"
+                        <button
+                          type="button"
                           className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            >
+                        >
                           Save Settings
-                            </button>
-                              </div>
-                            </div>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

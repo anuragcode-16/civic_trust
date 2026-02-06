@@ -9,7 +9,7 @@ declare global {
  * @returns boolean indicating if MetaMask is available
  */
 export const isMetaMaskInstalled = (): boolean => {
-  return typeof window !== 'undefined' && window.ethereum?.isMetaMask === true;
+  return typeof window !== 'undefined' && (window as any).ethereum?.isMetaMask === true;
 };
 
 /**
@@ -23,7 +23,7 @@ export const connectWallet = async (): Promise<string[]> => {
 
   try {
     // Request account access
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
     return accounts;
   } catch (error: any) {
     throw new Error(`Failed to connect wallet: ${error.message}`);
@@ -40,7 +40,7 @@ export const getChainId = async (): Promise<number> => {
   }
 
   try {
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const chainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
     return parseInt(chainId, 16);
   } catch (error: any) {
     throw new Error(`Failed to get chain ID: ${error.message}`);
@@ -70,7 +70,7 @@ export const switchToPolygonMumbai = async (): Promise<void> => {
   }
 
   try {
-    await window.ethereum.request({
+    await (window as any).ethereum.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: '0x13881' }], // Mumbai Testnet chain ID in hex
     });
@@ -93,7 +93,7 @@ export const addPolygonMumbaiNetwork = async (): Promise<void> => {
   }
 
   try {
-    await window.ethereum.request({
+    await (window as any).ethereum.request({
       method: 'wallet_addEthereumChain',
       params: [
         {
@@ -120,7 +120,7 @@ export const addPolygonMumbaiNetwork = async (): Promise<void> => {
  */
 export const listenForAccountChanges = (callback: (accounts: string[]) => void): void => {
   if (isMetaMaskInstalled()) {
-    window.ethereum.on('accountsChanged', callback);
+    (window as any).ethereum.on('accountsChanged', callback);
   }
 };
 
@@ -130,7 +130,7 @@ export const listenForAccountChanges = (callback: (accounts: string[]) => void):
  */
 export const listenForNetworkChanges = (callback: (chainId: number) => void): void => {
   if (isMetaMaskInstalled()) {
-    window.ethereum.on('chainChanged', (chainId: string) => {
+    (window as any).ethereum.on('chainChanged', (chainId: string) => {
       callback(parseInt(chainId, 16));
     });
   }

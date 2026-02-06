@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import TokenPriceChart from './TokenPriceChart';
 
 type TimeFrame = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function SocialHub() {
   const { isDarkMode } = useTheme();

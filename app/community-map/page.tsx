@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import Navbar from '../components/Navbar';
 import GeminiInsights from '../components/GeminiInsights';
 import EngagementHeatmap from '../components/EngagementHeatmap';

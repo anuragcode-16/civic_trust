@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import BarChart from '../components/charts/BarChart';
 import LineChart from '../components/charts/LineChart';
 import PieChart from '../components/charts/PieChart';

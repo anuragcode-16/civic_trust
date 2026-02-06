@@ -1,0 +1,15 @@
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+    <filter id="f1" x="0" y="0">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="15" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#e0f2fe" opacity="0.1"/>
+  <path d="M250 50 L450 120 V250 C450 380 360 480 250 500 C140 480 50 380 50 250 V120 L250 50 Z" fill="url(#grad1)" opacity="0.8" />
+  <path d="M250 70 L420 130 V250 C420 360 350 450 250 470 C150 450 80 360 80 250 V130 L250 70 Z" fill="none" stroke="white" stroke-width="10" opacity="0.5" />
+  <path d="M250 150 L350 200 L300 350 L200 350 L150 200 Z" fill="white" opacity="0.2" filter="url(#f1)" />
+</svg>

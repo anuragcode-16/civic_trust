@@ -15,7 +15,7 @@ const nextConfig = {
         'snappy': false,
         'socks': false,
         'aws4': false,
-        
+
         // Node.js core modules
         'zlib': false,
         'stream': false,
@@ -32,18 +32,18 @@ const nextConfig = {
         'os': false,
       };
     }
-    
+
     return config;
   },
   // Disable MongoDB on the client side entirely by treating its imports as external
   // in client components (we'll use API routes for data access)
-  experimental: {
-    serverComponentsExternalPackages: ['mongodb'],
-  },
+  serverExternalPackages: ['mongodb'],
   reactStrictMode: true,
-  swcMinify: true,
   images: {
-    domains: ['randomuser.me', 'api.qrserver.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'randomuser.me' },
+      { protocol: 'https', hostname: 'api.qrserver.com' },
+    ],
   },
 };
 

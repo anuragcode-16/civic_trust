@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import DAOVisualBuilder from '../components/DAOVisualBuilder';
 import ProposalTemplates from '../components/ProposalTemplates';
 import AadhaarAuth from '../components/AadhaarAuth';
